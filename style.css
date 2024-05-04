@@ -1,4 +1,269 @@
+/* 1. Enable smooth scrolling */
 html {
-  height: 100%;
+  scroll-behavior: smooth;
+}
+
+/* 2. Make nav sticky */
+main>nav {
+  position: sticky;
+  top: 2rem;
+  align-self: start;
+}
+
+/* 3. ScrollSpy active styles (see JS tab for activation) */
+.section-nav li.active>a {
+  color: #333;
+  font-weight: 500;
+}
+
+/* Sidebar Navigation */
+.section-nav {
+  padding-left: 0;
+  border-left: 1px solid #efefef;
+}
+
+.section-nav a {
+  text-decoration: none;
+  display: block;
+  padding: .125rem 0;
+  color: #ccc;
+  transition: all 50ms ease-in-out;
+  /* 💡 This small transition makes setting of the active state smooth */
+}
+
+.section-nav a:hover,
+.section-nav a:focus {
+  color: #666;
+}
+
+/** Poor man's reset **/
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  background: #f8f9fc;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+ul,
+ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+li {
+  margin-left: 1rem;
+}
+
+h1 {
+  font-weight: 300;
+}
+
+/** page layout **/
+main {
+  display: grid;
+  grid-template-columns: 1fr 15em;
+  max-width: 100em;
+  width: 90%;
+  margin: 0 auto;
+}
+
+/** enlarge the sections for this demo, so that we have a long scrollable page **/
+section {
+  padding-bottom: 20rem;
+}
+
+.title {
+  margin: 0;
+  line-height: 1.15;
+  font-size: 4rem;
+}
+
+.title,
+.description {
+  text-align: center;
+}
+
+.description {
+  margin: 4rem 0;
+  line-height: 1.5;
+  font-size: 1.5rem;
+}
+
+.code {
+  background: #fafafa;
+  border-radius: 5px;
+  padding: 0.75rem;
+  font-size: 1.1rem;
+  font-family: Menlo, Monaco, Lucida Console, Liberation Mono, DejaVu Sans Mono,
+    Bitstream Vera Sans Mono, Courier New, monospace;
+}
+
+.grid {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 800px;
+}
+
+.card {
+  margin: 1rem;
+  padding: 1.5rem;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  border: 1px solid #eaeaea;
+  border-radius: 10px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+  max-width: 300px;
+}
+
+.card:hover,
+.card:focus,
+.card:active {
+  color: #0070f3;
+  border-color: #0070f3;
+}
+
+.card h2 {
+  margin: 0 0 1rem 0;
+  font-size: 1.5rem;
+}
+
+.card p {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+  .grid {
+    width: 100%;
+    flex-direction: column;
+  }
+}
+
+/* Waypoints  */
+.graphic {
   width: 100%;
+  position: relative;
+}
+
+.graphic__prose {
+  width: 24rem;
+}
+
+.graphic__prose .trigger {
+  padding: 0;
+  margin: 0;
+  min-height: 240px;
+  /* min-height: 150vh; */
+  padding-bottom: 150vh;
+  font-size: 3vh;
+
+}
+
+.graphic__prose .overlap-trigger {
+  z-index: 1;
+  position: relative;
+  background-color: #f8f9fc;
+  padding-bottom: 3vh;
+  padding-top: 3vh;
+  padding-left: 4rem;
+  opacity: 0.9;
+  min-height: 0;
+}
+
+.graphic__vis {
+  position: absolute;
+  top: 0;
+  margin-left: 30rem;
+  -webkit-transform: translate3d(0, 0, 0);
+  -moz-transform: translate3d(0, 0, 0);
+  transform: translate3d(0, 0, 0);
+  height: 100vh;
+}
+
+.padding_text {
+  min-height: 240px;
+  padding-bottom: 150vh;
+  font-size: 3vh
+}
+
+.graphic__vis.is-fixed {
+  position: fixed;
+}
+
+.graphic__vis.is-bottom {
+  top: auto;
+  bottom: 0;
+}
+
+.graphic__vis svg {
+  /* border: 1px dashed black; */
+  top: 50%;
+  position: relative;
+  -webkit-transform: translateY(-50%);
+  -moz-transform: translateY(-50%);
+  transform: translateY(-50%);
+
+}
+
+.item circle {
+  stroke: #666;
+  stroke-width: 1px;
+  fill: #fff;
+}
+
+.item text {
+  fill: #666;
+  font-size: 12px;
+  text-anchor: middle;
+  alignment-baseline: middle;
+}
+
+button {
+  display: inline-block;
+  margin: 5%;
+  /*      height: 500px;*/
+  background-color: #333;
+  color: #f8f9fc;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #888;
+}
+
+footer {
+  background-color: #fff;
+  padding: 1rem;
+  text-align: center;
+  font-size: 14px;
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  /*  height: 50px;*/
+}
+
+.social-icons a {
+  display: inline-block;
+  margin-right: 10px;
+  color: #888;
+}
+
+.social-icons a:hover {
+  color: #333;
 }
