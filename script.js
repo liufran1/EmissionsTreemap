@@ -77,9 +77,9 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial) {
         .size([svgWidth, svgHeight])
         .padding(2);
 
-    const nodes = isInitial ? treemap(ghgRoot).leaves() : svg.selectAll("rect").data(treemap(ghgRoot).leaves());
+    const nodes = treemap(ghgRoot).leaves()
 
-    console.log(ghgRoot);
+    console.log(nodes);
 
     const rects = svg.selectAll("rect")
         .data(nodes);
