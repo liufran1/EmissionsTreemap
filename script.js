@@ -46,3 +46,27 @@ function formatSectorData(inputData) {
   })
   return hierarchyData
 }
+
+createPollutionMapGraphic = function() {
+  let svgHeight = 500;
+  let svgWidth = 1000;
+
+  const svg = d3
+    .select("#air_quality_map")
+    .append("svg")
+    .attr("height", svgHeight)
+    .attr("width", svgWidth);
+
+
+  d3.csv("data/ghg_emissions_by_sector.csv", (ghgEmissionsBySector) => {
+    let countryData = formatCountryData(ghgEmissionsBySector);
+    let sectorData = formatSectorData(ghgEmissionsBySector);
+    let ghgRoot = d3.stratify()
+      .id(function(d) { return d.name; })   // Name of the entity (column name is name in csv)
+      .parentId(function(d) { return d.parent; })   // Name of the parent (column name is parent in csv)
+      // (countryData);
+      (countryData);
+
+
+  })
+}
