@@ -36,7 +36,7 @@ function formatCountryData(inputData) {
 
         ghgFields.forEach((field) => {
             if (d[field] > 0) {
-                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field }
+                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field, country: d["Entity"] }
                 hierarchyData.push(childNode)
             }
         })
@@ -64,12 +64,12 @@ function formatSectorData(inputData) {
 
 let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'Brazil', 'Japan', 'Iran', 'Canada']
 
-let colors = d3.scaleOrdinal()
-    .domain(topCountries)
-    .range(d3.schemeAccent)
+// let colors = d3.scaleOrdinal()
+//     .domain(topCountries)
+//     .range(d3.schemeAccent)
 
 
-function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial) {
+function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors) {
     let ghgRoot = d3.stratify()
         .id(function(d) { return d.name; })
         .parentId(function(d) { return d.parent; })
@@ -125,6 +125,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial) {
 
 
 createPollutionMapGraphic = function() {
+    console.log("loading data")
     let svgHeight = 2000;
     let svgWidth = 1000;
 
@@ -137,9 +138,30 @@ createPollutionMapGraphic = function() {
 
     d3.csv("data/ghg-emissions-by-sector.csv", d3.autoType).then((ghgEmissionsBySector) => {
         let filteredArray = filterData(ghgEmissionsBySector)
+        console.log("data loaded")
+        document.getElementById('loaddiv').remove()
 
         let countryData = formatCountryData(filteredArray);
         let sectorData = formatSectorData(filteredArray);
+
+        let colors = function(country) {
+            let countryArray = filteredArray.map((d) => d["Entity"]).slice(0, 30)
+
+            // Check if the input string is in the array
+            if (countryArray.includes(country)) {
+                // Get the index of the input string in the array
+                const index = countryArray.indexOf(country);
+
+                // Map the index to a number between 0 and 1
+                const mappedNumber = 1 - (index / (countryArray.length - 1));
+
+                return d3.scaleSequential(d3.interpolateReds)(mappedNumber);
+            } else {
+                // Return null or another default value if the input string is not in the array
+                return "rgb(255, 255, 255)";
+            }
+        }
+        // console.log(colors("China"))
 
         let currentData = countryData;
 
@@ -150,12 +172,12 @@ createPollutionMapGraphic = function() {
                 currentData = countryData;
             }
 
-            plotTreeMap(currentData, svgHeight, svgWidth, svg, false);
+            plotTreeMap(currentData, svgHeight, svgWidth, svg, false, colors);
         }
 
         d3.select("#toggle-data").on("click", toggleData);
 
-        plotTreeMap(countryData, svgHeight, svgWidth, svg, true);
+        plotTreeMap(countryData, svgHeight, svgWidth, svg, true, colors);
     })
 }
 
