@@ -1,3 +1,5 @@
+const ghgFields = ['Greenhouse gas emissions from agriculture', 'Greenhouse gas emissions from land use change and forestry', 'Greenhouse gas emissions from waste', 'Greenhouse gas emissions from buildings', 'Greenhouse gas emissions from industry', 'Greenhouse gas emissions from manufacturing and construction', 'Greenhouse gas emissions from transport', 'Greenhouse gas emissions from electricity and heat', 'Fugitive emissions of greenhouse gases from energy production', 'Greenhouse gas emissions from other fuel combustion', 'Greenhouse gas emissions from bunker fuels']
+
 function filterData(inputData, filterCountries = []) {
   // Mistral chat prompt - I have a javascript array of objects called ghgEmissionsBySector. Each object has a "Year" field, "Entity" field, and a "Code" field. Filter this array for entries where "Code" is not an empty string, and where "Year" is equal to the max value of "Year" for a given "Entity" value
 
@@ -6,7 +8,7 @@ function filterData(inputData, filterCountries = []) {
     return acc;
   }, {});
   let filteredArray = inputData.filter(({ Code, Entity, Year }) => {
-    return Code !== "" && Year === maxYearsByEntity[Entity];
+    return Code !== "" && Year === maxYearsByEntity[Entity] && Code !== null && Code !== "OWID_WRL";
   });
 
   if (filterCountries.length > 0) {
@@ -47,26 +49,69 @@ function formatSectorData(inputData) {
   return hierarchyData
 }
 
+function plotTreeMap(root, svgHeight, svgWidth, svg) {
+  d3.treemap()
+    .size([svgWidth, svgHeight])
+    .padding(2)
+    (root)
+
+  svg
+    .selectAll("rect")
+    .data(root.leaves())
+    .enter()
+    .append("rect")
+    .attr('x', (d) => d.x0)
+    .attr('y', (d) => d.y0)
+    .attr('width', (d) => d.x1 - d.x0)
+    .attr('height', (d) => d.y1 - d.y0)
+    .style("stroke", "black")
+    .attr("fill", (d) => colors(d["data"]["country"]))
+  // .attr("fill", d => { while (d.depth > 1) d = d.parent; return colors(d.data.name); })
+
+
+  svg
+    .selectAll("text")
+    .data(root.leaves())
+    .enter()
+    .append("text")
+    .attr("x", function(d) { return d.x0 + 10 })    // +10 to adjust position (more right)
+    .attr("y", function(d) { return d.y0 + 20 })    // +20 to adjust position (lower)
+    .text((d) => { return d.data.name })
+    .attr("font-size", "10px")
+    .attr("fill", "white")
+
+  // return svg.node()
+}
+
+let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'Brazil', 'Japan', 'Iran', 'Canada']
+let colors = d3.scaleOrdinal()
+  .domain(topCountries)
+  .range(d3.schemeAccent)
+
 createPollutionMapGraphic = function() {
-  let svgHeight = 500;
+  let svgHeight = 20000;
   let svgWidth = 1000;
 
   const svg = d3
-    .select("#air_quality_map")
+    .select("#viz")
     .append("svg")
     .attr("height", svgHeight)
     .attr("width", svgWidth);
 
 
-  d3.csv("data/ghg_emissions_by_sector.csv", (ghgEmissionsBySector) => {
-    let countryData = formatCountryData(ghgEmissionsBySector);
-    let sectorData = formatSectorData(ghgEmissionsBySector);
+  d3.csv("data/ghg-emissions-by-sector.csv", d3.autoType).then((ghgEmissionsBySector) => {
+    let filteredArray = filterData(ghgEmissionsBySector)
+    let countryData = formatCountryData(filteredArray);
+    let sectorData = formatSectorData(filteredArray);
     let ghgRoot = d3.stratify()
       .id(function(d) { return d.name; })   // Name of the entity (column name is name in csv)
       .parentId(function(d) { return d.parent; })   // Name of the parent (column name is parent in csv)
       // (countryData);
       (countryData);
-
-
+    ghgRoot.sum(function(d) { return +d.value })
+    console.log(ghgEmissionsBySector)
+    plotTreeMap(ghgRoot, svgHeight, svgWidth, svg)
   })
 }
+
+createPollutionMapGraphic()
