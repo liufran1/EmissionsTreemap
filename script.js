@@ -1,4 +1,4 @@
-const ghgFields = ['Greenhouse gas emissions from agriculture', 'Greenhouse gas emissions from land use change and forestry', 'Greenhouse gas emissions from waste', 'Greenhouse gas emissions from buildings', 'Greenhouse gas emissions from industry', 'Greenhouse gas emissions from manufacturing and construction', 'Greenhouse gas emissions from transport', 'Greenhouse gas emissions from electricity and heat', 'Fugitive emissions of greenhouse gases from energy production', 'Greenhouse gas emissions from other fuel combustion', 'Greenhouse gas emissions from bunker fuels']
+const ghgFields = ["Greenhouse gas emissions from electricity and heat", "Greenhouse gas emissions from transport", "Greenhouse gas emissions from manufacturing and construction", "Greenhouse gas emissions from agriculture", "Fugitive emissions of greenhouse gases from energy production", "Greenhouse gas emissions from industry", "Greenhouse gas emissions from buildings", "Greenhouse gas emissions from waste", "Greenhouse gas emissions from land use change and forestry", "Greenhouse gas emissions from bunker fuels", "Greenhouse gas emissions from other fuel combustion"]
 
 
 function filterData(inputData, filterCountries = []) {
@@ -35,8 +35,10 @@ function formatCountryData(inputData) {
         hierarchyData.push(parentNode)
 
         ghgFields.forEach((field) => {
-            let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field }
-            hierarchyData.push(childNode)
+            if (d[field] > 0) {
+                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field }
+                hierarchyData.push(childNode)
+            }
         })
     })
     return hierarchyData
@@ -50,8 +52,10 @@ function formatSectorData(inputData) {
         hierarchyData.push(parentNode)
 
         inputData.forEach((d) => {
-            let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: field, value: d[field], country: d["Entity"] }
-            hierarchyData.push(childNode)
+            if (d[field] > 0) {
+                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: field, value: d[field], country: d["Entity"] }
+                hierarchyData.push(childNode)
+            }
         })
     })
     return hierarchyData
@@ -121,7 +125,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial) {
 
 
 createPollutionMapGraphic = function() {
-    let svgHeight = 20000;
+    let svgHeight = 2000;
     let svgWidth = 1000;
 
     const svg = d3
