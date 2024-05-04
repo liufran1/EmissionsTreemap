@@ -1,5 +1,6 @@
 const ghgFields = ['Greenhouse gas emissions from agriculture', 'Greenhouse gas emissions from land use change and forestry', 'Greenhouse gas emissions from waste', 'Greenhouse gas emissions from buildings', 'Greenhouse gas emissions from industry', 'Greenhouse gas emissions from manufacturing and construction', 'Greenhouse gas emissions from transport', 'Greenhouse gas emissions from electricity and heat', 'Fugitive emissions of greenhouse gases from energy production', 'Greenhouse gas emissions from other fuel combustion', 'Greenhouse gas emissions from bunker fuels']
 
+
 function filterData(inputData, filterCountries = []) {
   // Mistral chat prompt - I have a javascript array of objects called ghgEmissionsBySector. Each object has a "Year" field, "Entity" field, and a "Code" field. Filter this array for entries where "Code" is not an empty string, and where "Year" is equal to the max value of "Year" for a given "Entity" value
 
@@ -9,6 +10,12 @@ function filterData(inputData, filterCountries = []) {
   }, {});
   let filteredArray = inputData.filter(({ Code, Entity, Year }) => {
     return Code !== "" && Year === maxYearsByEntity[Entity] && Code !== null && Code !== "OWID_WRL";
+  });
+
+  filteredArray.sort((a, b) => {
+    const sumA = ghgFields.reduce((sum, field) => sum + (a[field] || 0), 0);
+    const sumB = ghgFields.reduce((sum, field) => sum + (b[field] || 0), 0);
+    return sumB - sumA;
   });
 
   if (filterCountries.length > 0) {
@@ -49,15 +56,28 @@ function formatSectorData(inputData) {
   return hierarchyData
 }
 
-function plotTreeMap(root, svgHeight, svgWidth, svg) {
+let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'Brazil', 'Japan', 'Iran', 'Canada']
+let colors = d3.scaleOrdinal()
+  .domain(topCountries)
+  .range(d3.schemeAccent)
+
+
+function plotTreeMap(inputData, svgHeight, svgWidth, svg) {
+  let ghgRoot = d3.stratify()
+    .id(function(d) { return d.name; })   // Name of the entity (column name is name in csv)
+    .parentId(function(d) { return d.parent; })   // Name of the parent (column name is parent in csv)
+    (inputData);
+
+  ghgRoot.sum(function(d) { return +d.value })
+
   d3.treemap()
     .size([svgWidth, svgHeight])
     .padding(2)
-    (root)
+    (ghgRoot)
 
   svg
     .selectAll("rect")
-    .data(root.leaves())
+    .data(ghgRoot.leaves())
     .enter()
     .append("rect")
     .attr('x', (d) => d.x0)
@@ -71,7 +91,7 @@ function plotTreeMap(root, svgHeight, svgWidth, svg) {
 
   svg
     .selectAll("text")
-    .data(root.leaves())
+    .data(ghgRoot.leaves())
     .enter()
     .append("text")
     .attr("x", function(d) { return d.x0 + 10 })    // +10 to adjust position (more right)
@@ -83,10 +103,7 @@ function plotTreeMap(root, svgHeight, svgWidth, svg) {
   // return svg.node()
 }
 
-let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'Brazil', 'Japan', 'Iran', 'Canada']
-let colors = d3.scaleOrdinal()
-  .domain(topCountries)
-  .range(d3.schemeAccent)
+
 
 createPollutionMapGraphic = function() {
   let svgHeight = 20000;
@@ -101,16 +118,11 @@ createPollutionMapGraphic = function() {
 
   d3.csv("data/ghg-emissions-by-sector.csv", d3.autoType).then((ghgEmissionsBySector) => {
     let filteredArray = filterData(ghgEmissionsBySector)
+
     let countryData = formatCountryData(filteredArray);
     let sectorData = formatSectorData(filteredArray);
-    let ghgRoot = d3.stratify()
-      .id(function(d) { return d.name; })   // Name of the entity (column name is name in csv)
-      .parentId(function(d) { return d.parent; })   // Name of the parent (column name is parent in csv)
-      // (countryData);
-      (countryData);
-    ghgRoot.sum(function(d) { return +d.value })
-    console.log(ghgEmissionsBySector)
-    plotTreeMap(ghgRoot, svgHeight, svgWidth, svg)
+
+    plotTreeMap(countryData, svgHeight, svgWidth, svg)
   })
 }
 
