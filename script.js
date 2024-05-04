@@ -2,12 +2,12 @@ const ghgFields = ['Greenhouse gas emissions from agriculture', 'Greenhouse gas 
 
 
 function filterData(inputData, filterCountries = []) {
-    // Mistral chat prompt - I have a javascript array of objects called ghgEmissionsBySector. Each object has a "Year" field, "Entity" field, and a "Code" field. Filter this array for entries where "Code" is not an empty string, and where "Year" is equal to the max value of "Year" for a given "Entity" value
 
     let maxYearsByEntity = inputData.reduce((acc, { Entity, Year }) => {
         acc[Entity] = Math.max(Year, acc[Entity] || 0);
         return acc;
     }, {});
+
     let filteredArray = inputData.filter(({ Code, Entity, Year }) => {
         return Code !== "" && Year === maxYearsByEntity[Entity] && Code !== null && Code !== "OWID_WRL";
     });
@@ -65,7 +65,7 @@ let colors = d3.scaleOrdinal()
     .range(d3.schemeAccent)
 
 
-function plotTreeMap(inputData, svgHeight, svgWidth, svg) {
+function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial) {
     let ghgRoot = d3.stratify()
         .id(function(d) { return d.name; })
         .parentId(function(d) { return d.parent; })
@@ -73,37 +73,50 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg) {
 
     ghgRoot.sum(function(d) { return +d.value })
 
-    d3.treemap()
+    const treemap = d3.treemap()
         .size([svgWidth, svgHeight])
-        .padding(2)
-        (ghgRoot)
+        .padding(2);
 
-    svg
-        .selectAll("rect")
-        .data(ghgRoot.leaves())
-        .enter()
+    const nodes = isInitial ? treemap(ghgRoot).leaves() : svg.selectAll("rect").data(treemap(ghgRoot).leaves());
+
+    console.log(ghgRoot);
+
+    const rects = svg.selectAll("rect")
+        .data(nodes);
+
+    rects.enter()
         .append("rect")
+        .merge(rects)
+        .transition()
+        .duration(750)
         .attr('x', (d) => d.x0)
         .attr('y', (d) => d.y0)
         .attr('width', (d) => d.x1 - d.x0)
         .attr('height', (d) => d.y1 - d.y0)
         .style("stroke", "black")
-        .attr("fill", (d) => colors(d["data"]["country"]))
-    // .attr("fill", d => { while (d.depth > 1) d = d.parent; return colors(d.data.name); })
+        .attr("fill", (d) => colors(d["data"]["country"]));
 
+    rects.exit().remove();
 
-    svg
-        .selectAll("text")
-        .data(ghgRoot.leaves())
-        .enter()
+    // ... (do the same for the text elements)
+
+    const texts = svg.selectAll("text")
+        .data(nodes);
+
+    texts.enter()
         .append("text")
-        .attr("x", function(d) { return d.x0 + 10 })    // +10 to adjust position (more right)
-        .attr("y", function(d) { return d.y0 + 20 })    // +20 to adjust position (lower)
+        .merge(texts)
+        .transition()
+        .duration(750)
+        .attr("x", function(d) { return d.x0 + 10 })
+        .attr("y", function(d) { return d.y0 + 20 })
         .text((d) => { return d.data.name })
         .attr("font-size", "10px")
-        .attr("fill", "white")
+        .attr("fill", "white");
 
+    texts.exit().remove();
 }
+
 
 
 
@@ -124,7 +137,21 @@ createPollutionMapGraphic = function() {
         let countryData = formatCountryData(filteredArray);
         let sectorData = formatSectorData(filteredArray);
 
-        plotTreeMap(countryData, svgHeight, svgWidth, svg)
+        let currentData = countryData;
+
+        function toggleData() {
+            if (currentData === countryData) {
+                currentData = sectorData;
+            } else {
+                currentData = countryData;
+            }
+
+            plotTreeMap(currentData, svgHeight, svgWidth, svg, false);
+        }
+
+        d3.select("#toggle-data").on("click", toggleData);
+
+        plotTreeMap(countryData, svgHeight, svgWidth, svg, true);
     })
 }
 
