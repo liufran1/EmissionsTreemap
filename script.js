@@ -115,7 +115,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
     rectsUpdate
         .on("mouseover", function(event, d) {
             const value = d.value ? d.value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "N/A";
-            tooltip.html(`<strong>${d.data.name}</strong><br/>${value} MtCO2e`)
+            tooltip.html(`<strong>${d.data.name}</strong><br/>${value} tCO2e`)
                 .classed("visible", true);
         })
         .on("mousemove", function(event) {
