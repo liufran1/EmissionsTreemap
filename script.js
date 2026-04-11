@@ -85,6 +85,8 @@ let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'B
 
 
 function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, tooltip) {
+    svg.attr("height", svgHeight).attr("width", svgWidth);
+
     let ghgRoot = d3.stratify()
         .id(function(d) { return d.name; })
         .parentId(function(d) { return d.parent; })
@@ -155,20 +157,33 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
 
 createPollutionMapGraphic = function() {
     console.log("loading data")
-    let svgHeight = 2000;
-    let svgWidth = 1000;
+    let baseHeight = 2000;
+    let baseWidth = 1000;
 
     const svg = d3
         .select("#viz")
         .append("svg")
-        .attr("height", svgHeight)
-        .attr("width", svgWidth);
+        .attr("height", baseHeight)
+        .attr("width", baseWidth);
 
 
     d3.csv("data/ghg-emissions-by-sector.csv", d3.autoType).then((ghgEmissionsBySector) => {
         let filteredArray = filterData(ghgEmissionsBySector)
         console.log("data loaded")
         document.getElementById('loaddiv').remove()
+
+        let fullTotal = d3.sum(filteredArray, d => ghgFields.reduce((sum, field) => sum + (d[field] || 0), 0));
+        let currentFilteredArray = filteredArray;
+
+        // Populate datalist with countries
+        const countries = [...new Set(filteredArray.map(d => d.Entity))].sort();
+        d3.select("#countries").selectAll("option")
+            .data(countries)
+            .enter()
+            .append("option")
+            .attr("value", d => d);
+
+        let currentFilter = [];
 
         let countryData = formatCountryData(filteredArray);
         let sectorData = formatSectorData(filteredArray);
@@ -190,9 +205,37 @@ createPollutionMapGraphic = function() {
                 return "rgb(255, 255, 255)";
             }
         }
-        // console.log(colors("China"))
 
         let currentData = countryData;
+
+        function updateFilter(value) {
+            currentFilter = value ? [value] : [];
+            const newFilteredArray = filterData(ghgEmissionsBySector, currentFilter);
+            currentFilteredArray = newFilteredArray;
+            const newCountryData = formatCountryData(newFilteredArray);
+            const newSectorData = formatSectorData(newFilteredArray);
+            currentData = currentData === countryData ? newCountryData : newSectorData;
+            countryData = newCountryData;
+            sectorData = newSectorData;
+
+            colors = function(country) {
+                let countryArray = newFilteredArray.map((d) => d["Entity"]).slice(0, 30)
+                if (countryArray.includes(country)) {
+                    const index = countryArray.indexOf(country);
+                    const mappedNumber = 1 - (index / (countryArray.length - 1));
+                    return d3.scaleSequential(d3.interpolateReds)(mappedNumber);
+                } else {
+                    return "rgb(255, 255, 255)";
+                }
+            }
+
+            const filteredTotal = d3.sum(newFilteredArray, d => ghgFields.reduce((sum, field) => sum + (d[field] || 0), 0));
+            const scale = Math.sqrt(filteredTotal / fullTotal);
+            const currentHeight = baseHeight * scale;
+            const currentWidth = baseWidth * scale;
+
+            plotTreeMap(currentData, currentHeight, currentWidth, svg, false, colors, tooltip);
+        }
 
         function toggleData() {
             if (currentData === countryData) {
@@ -201,7 +244,12 @@ createPollutionMapGraphic = function() {
                 currentData = countryData;
             }
 
-            plotTreeMap(currentData, svgHeight, svgWidth, svg, false, colors, tooltip);
+            const currentTotal = d3.sum(currentFilteredArray, d => ghgFields.reduce((sum, field) => sum + (d[field] || 0), 0));
+            const scale = Math.sqrt(currentTotal / fullTotal);
+            const currentHeight = baseHeight * scale;
+            const currentWidth = baseWidth * scale;
+
+            plotTreeMap(currentData, currentHeight, currentWidth, svg, false, colors, tooltip);
         }
 
         const tooltip = d3.select("body")
@@ -210,7 +258,18 @@ createPollutionMapGraphic = function() {
 
         d3.select("#toggle-data").on("click", toggleData);
 
-        plotTreeMap(countryData, svgHeight, svgWidth, svg, true, colors, tooltip);
+        // Filter listener
+        d3.select("#country-filter").on("input", function() {
+            updateFilter(this.value.trim());
+        });
+
+        // Clear filter button
+        d3.select("#clear-filter").on("click", function() {
+            d3.select("#country-filter").property("value", "");
+            updateFilter("");
+        });
+
+        plotTreeMap(countryData, baseHeight, baseWidth, svg, true, colors, tooltip);
     })
 }
 
