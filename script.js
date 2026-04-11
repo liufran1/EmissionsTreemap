@@ -1,11 +1,17 @@
 // const ghgFields = ["Greenhouse gas emissions from electricity and heat", "Greenhouse gas emissions from transport", "Greenhouse gas emissions from manufacturing and construction", "Greenhouse gas emissions from agriculture", "Fugitive emissions of greenhouse gases from energy production", "Greenhouse gas emissions from industry", "Greenhouse gas emissions from buildings", "Greenhouse gas emissions from waste", "Greenhouse gas emissions from land use change and forestry", "Greenhouse gas emissions from bunker fuels", "Greenhouse gas emissions from other fuel combustion"]
-const ghgFields = ['Agriculture', 
-        'Land-use change and forestry',
-        'Waste', 
-        'Buildings', 
-        'Industry', 'Manufacturing and construction',
-       'Transport', 'Electricity and heat', 'Fugitive emissions',
-       'Other fuel combustion', 'Aviation and shipping']
+const ghgFields = [
+    'Electricity and heat', 
+    'Transport', 
+    'Manufacturing and construction',
+    'Industry', 
+    'Agriculture', 
+    'Aviation and shipping',
+    'Land-use change and forestry',
+    'Waste', 
+    'Buildings', 
+    'Fugitive emissions',
+    'Other fuel combustion'
+    ]
 
 
 function filterData(inputData, filterCountries = []) {
@@ -16,7 +22,7 @@ function filterData(inputData, filterCountries = []) {
     }, {});
 
     let filteredArray = inputData.filter(({ Code, Entity, Year }) => {
-        return Code !== "" && Year === maxYearsByEntity[Entity] && Code !== null && Code !== "OWID_WRL";
+        return Code !== "" && Year === maxYearsByEntity[Entity] && Code !== null && !Code.includes("OWID_");
     });
 
     filteredArray.sort((a, b) => {
