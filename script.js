@@ -49,13 +49,14 @@ function formatCountryData(inputData) {
 
         ghgFields.forEach((field) => {
             if (d[field] > 0) {
-                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field, country: d["Entity"] }
+                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: d["Entity"], value: d[field], sector: field, country: d["Entity"], id: `${d["Entity"]}-${field}` }
                 hierarchyData.push(childNode)
             }
         })
     })
     return hierarchyData
 }
+
 
 function formatSectorData(inputData) {
     let hierarchyData = [{ name: "Origin", parent: "", value: "" }]
@@ -66,13 +67,14 @@ function formatSectorData(inputData) {
 
         inputData.forEach((d) => {
             if (d[field] > 0) {
-                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: field, value: d[field], country: d["Entity"] }
+                let childNode = { name: `${d["Entity"]} - ${field.replace("Greenhouse gas emissions from ", "")}`, parent: field, value: d[field], country: d["Entity"], id: `${d["Entity"]}-${field}` }
                 hierarchyData.push(childNode)
             }
         })
     })
     return hierarchyData
 }
+
 
 
 let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'Brazil', 'Japan', 'Iran', 'Canada']
@@ -99,7 +101,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
     console.log(nodes);
 
     const rects = svg.selectAll("rect")
-        .data(nodes);
+        .data(nodes, d => d.id);
 
     const rectsUpdate = rects.enter()
         .append("rect")
@@ -132,7 +134,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
     // ... (do the same for the text elements)
 
     const texts = svg.selectAll("text")
-        .data(nodes);
+        .data(nodes, d => d.id);
 
     texts.enter()
         .append("text")
