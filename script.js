@@ -82,7 +82,7 @@ let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'B
 //     .range(d3.schemeAccent)
 
 
-function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors) {
+function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, tooltip) {
     let ghgRoot = d3.stratify()
         .id(function(d) { return d.name; })
         .parentId(function(d) { return d.parent; })
@@ -101,9 +101,23 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors) {
     const rects = svg.selectAll("rect")
         .data(nodes);
 
-    rects.enter()
+    const rectsUpdate = rects.enter()
         .append("rect")
-        .merge(rects)
+        .merge(rects);
+
+    rectsUpdate
+        .on("mouseover", function(event, d) {
+            const value = d.value ? d.value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "N/A";
+            tooltip.html(`<strong>${d.data.name}</strong><br/>${value} MtCO2e`)
+                .classed("visible", true);
+        })
+        .on("mousemove", function(event) {
+            tooltip.style("left", `${event.pageX + 12}px`)
+                .style("top", `${event.pageY + 12}px`);
+        })
+        .on("mouseout", function() {
+            tooltip.classed("visible", false);
+        })
         .transition()
         .duration(750)
         .attr('x', (d) => d.x0)
@@ -185,12 +199,16 @@ createPollutionMapGraphic = function() {
                 currentData = countryData;
             }
 
-            plotTreeMap(currentData, svgHeight, svgWidth, svg, false, colors);
+            plotTreeMap(currentData, svgHeight, svgWidth, svg, false, colors, tooltip);
         }
+
+        const tooltip = d3.select("body")
+            .append("div")
+            .attr("class", "tooltip");
 
         d3.select("#toggle-data").on("click", toggleData);
 
-        plotTreeMap(countryData, svgHeight, svgWidth, svg, true, colors);
+        plotTreeMap(countryData, svgHeight, svgWidth, svg, true, colors, tooltip);
     })
 }
 
