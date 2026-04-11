@@ -98,12 +98,15 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
         .size([svgWidth, svgHeight])
         .padding(2);
 
-    const nodes = treemap(ghgRoot).leaves()
+    const allNodes = treemap(ghgRoot).descendants();
+    const leafNodes = allNodes.filter(d => d.height === 0);
+    const isCountryView = leafNodes.length > 0 && !ghgFields.includes(leafNodes[0].parent.data.name);
+    const countryNodes = isCountryView ? allNodes.filter(d => d.depth === 1 && !topCountries.includes(d.data.name)) : [];
 
-    console.log(nodes);
+    console.log(leafNodes);
 
     const rects = svg.selectAll("rect")
-        .data(nodes, d => d.id);
+        .data(leafNodes, d => d.id);
 
     const rectsUpdate = rects.enter()
         .append("rect")
@@ -133,23 +136,41 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
 
     rects.exit().remove();
 
-    // ... (do the same for the text elements)
+    // Leaf texts
+    const leafTexts = svg.selectAll(".leaf-text")
+        .data(leafNodes, d => d.id);
 
-    const texts = svg.selectAll("text")
-        .data(nodes, d => d.id);
-
-    texts.enter()
+    leafTexts.enter()
         .append("text")
-        .merge(texts)
+        .attr("class", "leaf-text")
+        .merge(leafTexts)
         .transition()
         .duration(750)
         .attr("x", function(d) { return d.x0 + 10 })
         .attr("y", function(d) { return d.y0 + 20 })
-        .text((d) => { return d.data.name })
+        .text((d) => topCountries.includes(d.data.country) ? d.data.name : "")
         .attr("font-size", "10px")
         .attr("fill", "white");
 
-    texts.exit().remove();
+    leafTexts.exit().remove();
+
+    // Country texts for non-top countries
+    const countryTexts = svg.selectAll(".country-text")
+        .data(countryNodes, d => d.id);
+
+    countryTexts.enter()
+        .append("text")
+        .attr("class", "country-text")
+        .merge(countryTexts)
+        .attr("x", d => (d.x0 + d.x1) / 2)
+        .attr("y", d => (d.y0 + d.y1) / 2)
+        .attr("text-anchor", "middle")
+        .attr("dominant-baseline", "middle")
+        .text(d => d.data.name)
+        .attr("font-size", "14px")
+        .attr("fill", "black");
+
+    countryTexts.exit().remove();
 }
 
 
