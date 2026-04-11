@@ -1,0 +1,1 @@
+Data sourced from [Our World in Data](https://ourworldindata.org/emissions-by-sector)

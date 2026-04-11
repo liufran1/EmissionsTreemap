@@ -1,4 +1,11 @@
-const ghgFields = ["Greenhouse gas emissions from electricity and heat", "Greenhouse gas emissions from transport", "Greenhouse gas emissions from manufacturing and construction", "Greenhouse gas emissions from agriculture", "Fugitive emissions of greenhouse gases from energy production", "Greenhouse gas emissions from industry", "Greenhouse gas emissions from buildings", "Greenhouse gas emissions from waste", "Greenhouse gas emissions from land use change and forestry", "Greenhouse gas emissions from bunker fuels", "Greenhouse gas emissions from other fuel combustion"]
+// const ghgFields = ["Greenhouse gas emissions from electricity and heat", "Greenhouse gas emissions from transport", "Greenhouse gas emissions from manufacturing and construction", "Greenhouse gas emissions from agriculture", "Fugitive emissions of greenhouse gases from energy production", "Greenhouse gas emissions from industry", "Greenhouse gas emissions from buildings", "Greenhouse gas emissions from waste", "Greenhouse gas emissions from land use change and forestry", "Greenhouse gas emissions from bunker fuels", "Greenhouse gas emissions from other fuel combustion"]
+const ghgFields = ['Agriculture', 
+        'Land-use change and forestry',
+        'Waste', 
+        'Buildings', 
+        'Industry', 'Manufacturing and construction',
+       'Transport', 'Electricity and heat', 'Fugitive emissions',
+       'Other fuel combustion', 'Aviation and shipping']
 
 
 function filterData(inputData, filterCountries = []) {
