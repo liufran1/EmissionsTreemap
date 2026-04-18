@@ -84,7 +84,7 @@ let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'B
 //     .range(d3.schemeAccent)
 
 
-function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, tooltip) {
+function plotTreeMap(inputData, svgHeight, svgWidth, svg, _isInitial, colors, tooltip) {
     svg.attr("height", svgHeight).attr("width", svgWidth);
 
     let ghgRoot = d3.stratify()
@@ -103,7 +103,7 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
     const isCountryView = leafNodes.length > 0 && !ghgFields.includes(leafNodes[0].parent.data.name);
     const countryNodes = isCountryView ? allNodes.filter(d => d.depth === 1 && !topCountries.includes(d.data.name)) : [];
 
-    console.log(leafNodes);
+    // console.log(leafNodes);
 
     const rects = svg.selectAll("rect")
         .data(leafNodes, d => d.id);
@@ -114,8 +114,8 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
 
     rectsUpdate
         .on("mouseover", function(event, d) {
-            const value = d.value ? d.value.toLocaleString(undefined, { maximumFractionDigits: 1 }) : "N/A";
-            tooltip.html(`<strong>${d.data.name}</strong><br/>${value} tCO2e`)
+            const value = d.value ? (d.value/1000000).toLocaleString(undefined, { maximumFractionDigits: 1 }) : "N/A";
+            tooltip.html(`<strong>${d.data.name}</strong><br/>${value} million tCO2e`)
                 .classed("visible", true);
         })
         .on("mousemove", function(event) {
@@ -179,7 +179,8 @@ function plotTreeMap(inputData, svgHeight, svgWidth, svg, isInitial, colors, too
 createPollutionMapGraphic = function() {
     console.log("loading data")
     let baseHeight = 2000;
-    let baseWidth = 1000;
+    let baseWidth = window.innerWidth * 0.9;
+
 
     const svg = d3
         .select("#viz")
