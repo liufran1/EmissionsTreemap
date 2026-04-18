@@ -85,6 +85,7 @@ let topCountries = ['China', 'United States', 'India', 'Russia', 'Indonesia', 'B
 
 
 function plotTreeMap(inputData, svgHeight, svgWidth, svg, _isInitial, colors, tooltip) {
+
     svg.attr("height", svgHeight).attr("width", svgWidth);
 
     let ghgRoot = d3.stratify()
@@ -262,8 +263,11 @@ createPollutionMapGraphic = function() {
         function toggleData() {
             if (currentData === countryData) {
                 currentData = sectorData;
+                d3.select("#toggle-data").text("Switch to country view");
             } else {
                 currentData = countryData;
+                d3.select("#toggle-data").text("Switch to sector view");
+                
             }
 
             const currentTotal = d3.sum(currentFilteredArray, d => ghgFields.reduce((sum, field) => sum + (d[field] || 0), 0));
@@ -277,18 +281,20 @@ createPollutionMapGraphic = function() {
         const tooltip = d3.select("body")
             .append("div")
             .attr("class", "tooltip");
-
+        
         d3.select("#toggle-data").on("click", toggleData);
 
         // Filter listener
         d3.select("#country-filter").on("input", function() {
             updateFilter(this.value.trim());
+            // d3.select("#toggle-data").setAttribute("disabled", "true");
         });
 
         // Clear filter button
         d3.select("#clear-filter").on("click", function() {
             d3.select("#country-filter").property("value", "");
             updateFilter("");
+            // d3.select("#toggle-data").removeAttribute("disabled");
         });
 
         plotTreeMap(countryData, baseHeight, baseWidth, svg, true, colors, tooltip);
