@@ -1,5 +1,5 @@
 **TO-DO**
-* When filtered by country, disable the "Toggle Data" button
+* Update info to describe what the categories entail
 * When filtered by country, toggle relative size
 
 **Backlog**
