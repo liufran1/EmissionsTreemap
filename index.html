@@ -169,6 +169,11 @@
     color: var(--bg);
   }
   .seg button:not(.active):hover { color: var(--ink); }
+  .seg button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    color: var(--ink-3);
+  }
 
   /* search */
   .search {
@@ -703,6 +708,8 @@ function renderTreemap() {
     d3.select('#chart-title').text('Emissions by sector, then country');
     d3.select('#chart-sub').text('Each group is a sector; cells inside are the countries contributing to it.');
   }
+
+  d3.selectAll('.seg button').property('disabled', !!state.filter);
 }
 
 function renderLegend() {
@@ -746,6 +753,7 @@ function renderAll() {
 
 // --- wire up ---
 d3.selectAll('.seg button').on('click', function() {
+  if (this.disabled) return;
   d3.selectAll('.seg button').classed('active', false);
   d3.select(this).classed('active', true);
   state.view = this.dataset.view;
