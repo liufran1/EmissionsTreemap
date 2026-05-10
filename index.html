@@ -688,12 +688,13 @@ function renderTreemap() {
     .text(d => {
       const w = d.x1 - d.x0, h = d.y1 - d.y0;
       if (w < 80 || h < 44) return '';
+      const sectorLabel = d.data.sector || '';
       return state.view === 'country'
-        ? d.data.sector.replace('Manufacturing and construction','Mfg & const.')
-                       .replace('Land-use change and forestry','Land use')
-                       .replace('Aviation and shipping','Aviation')
-                       .replace('Electricity and heat','Electricity')
-                       .replace('Other fuel combustion','Other fuel')
+        ? sectorLabel.replace('Manufacturing and construction','Mfg & const.')
+                     .replace('Land-use change and forestry','Land use')
+                     .replace('Aviation and shipping','Aviation')
+                     .replace('Electricity and heat','Electricity')
+                     .replace('Other fuel combustion','Other fuel')
         : d.data.country;
     });
 
@@ -771,16 +772,20 @@ d3.select('#search').on('input', function() {
 window.addEventListener('resize', () => renderTreemap());
 
 // --- load data ---
-d3.csv('../data/ghg-emissions-by-sector.csv', d3.autoType).then(raw => {
-  state.rows = latestRows(raw);
-  state.fullTotal = d3.sum(state.rows, totalOf);
+d3.csv('data/ghg-emissions-by-sector.csv', d3.autoType)
+  .then(raw => {
+    state.rows = latestRows(raw);
+    state.fullTotal = d3.sum(state.rows, totalOf);
 
-  // datalist
-  const dl = d3.select('#countries');
-  state.rows.map(r => r.Entity).sort().forEach(c => dl.append('option').attr('value', c));
+    // datalist
+    const dl = d3.select('#countries');
+    state.rows.map(r => r.Entity).sort().forEach(c => dl.append('option').attr('value', c));
 
-  renderAll();
-});
+    renderAll();
+  })
+  .catch(error => {
+    console.error('Failed to load emissions data:', error);
+  });
 </script>
 </body>
 </html>
