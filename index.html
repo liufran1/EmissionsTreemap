@@ -1,51 +1,778 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>Carbon Emission Treemap</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
-  <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
-    />
-  <title>Global Carbon Emissions</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-</head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Where the world's emissions come from</title>
+<link
+  rel="stylesheet"
+  href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css"
+/>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<style>
+  :root {
+    --bg:        #f8f9fc;
+    --surface:   #ffffff;
+    --line:      oklch(0.90 0.008 80);
+    --line-2:    oklch(0.82 0.01 80);
+    --ink:       oklch(0.20 0.01 80);
+    --ink-2:     oklch(0.42 0.01 80);
+    --ink-3:     oklch(0.58 0.01 80);
+    --accent:    oklch(0.58 0.17 35);
+    --accent-2:  oklch(0.58 0.17 35 / 0.10);
 
+    /* sector palette — same chroma/lightness, varied hue */
+    --c-elec:    oklch(0.62 0.13 35);   /* ember */
+    --c-trans:   oklch(0.62 0.13 70);   /* amber */
+    --c-mfg:     oklch(0.62 0.13 130);  /* moss */
+    --c-ind:     oklch(0.62 0.13 175);  /* teal */
+    --c-agri:    oklch(0.62 0.13 220);  /* sky */
+    --c-avia:    oklch(0.62 0.13 270);  /* indigo */
+    --c-land:    oklch(0.62 0.13 320);  /* plum */
+    --c-waste:   oklch(0.62 0.13 5);    /* rust */
+    --c-bldg:    oklch(0.55 0.06 60);   /* taupe */
+    --c-fugi:    oklch(0.45 0.04 60);   /* graphite */
+    --c-other:   oklch(0.70 0.02 80);   /* sand */
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    padding-bottom: 64px; /* room for fixed footer */
+  }
+  a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  a:hover { color: var(--accent); }
+
+  .page { max-width: 1180px; margin: 0 auto; padding: 56px 40px 80px; }
+
+  /* ---------- Header ---------- */
+  .eyebrow {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 24px; height: 1px;
+    background: var(--accent);
+    display: inline-block;
+  }
+  h1 {
+    font-family: Arial, Helvetica, sans-serif;
+    font-weight: 300;
+    font-size: 52px;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    margin: 0 0 20px;
+    text-wrap: balance;
+    max-width: 880px;
+  }
+  h1 em { font-style: italic; color: var(--ink-2); font-weight: 400; }
+  .dek {
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--ink-2);
+    max-width: 680px;
+    margin: 0 0 36px;
+    text-wrap: pretty;
+  }
+
+  /* ---------- Stat strip ---------- */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin: 0 0 40px;
+  }
+  .stat {
+    background: var(--bg);
+    padding: 18px 20px;
+  }
+  .stat .num {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 28px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat .num .unit {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    color: var(--ink-3);
+    margin-left: 4px;
+    font-weight: 400;
+  }
+  .stat .lbl {
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .stat .lbl a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .stat .lbl a:hover { color: var(--accent); }
+
+  /* ---------- Controls ---------- */
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 28px;
+  }
+  .ctrl-label {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-3);
+  }
+
+  /* segmented toggle */
+  .seg {
+    display: inline-flex;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 3px;
+    position: relative;
+  }
+  .seg button {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-2);
+    padding: 7px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color .15s ease;
+  }
+  .seg button.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+  .seg button:not(.active):hover { color: var(--ink); }
+
+  /* search */
+  .search {
+    position: relative;
+    flex: 1;
+    max-width: 340px;
+    min-width: 220px;
+  }
+  .search svg {
+    position: absolute;
+    left: 12px; top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    color: var(--ink-3);
+    pointer-events: none;
+  }
+  .search input {
+    width: 100%;
+    appearance: none;
+    border: 1px solid var(--line);
+    background: var(--bg);
+    border-radius: 999px;
+    padding: 8px 14px 8px 34px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink);
+    transition: border-color .15s ease, box-shadow .15s ease;
+  }
+  .search input:focus {
+    outline: none;
+    border-color: var(--ink-2);
+    box-shadow: 0 0 0 3px var(--accent-2);
+  }
+  .search input::placeholder { color: var(--ink-3); }
+
+  /* filter chip */
+  .chips { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 5px 6px 5px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .chip button {
+    appearance: none;
+    border: 0;
+    background: rgba(255,255,255,0.18);
+    color: var(--bg);
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 0;
+  }
+  .chip button:hover { background: rgba(255,255,255,0.32); }
+
+  /* ---------- Chart frame ---------- */
+  .chart-frame {
+    border: 1px solid var(--line);
+    background: var(--bg);
+    padding: 24px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+  .chart-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 16px;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .chart-title {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+  .chart-sub {
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+  .chart-total {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    color: var(--ink-2);
+  }
+  .chart-total b { color: var(--ink); font-weight: 500; }
+
+  #viz {
+    width: 100%;
+    position: relative;
+    min-height: 200px;
+  }
+  #viz svg { display: block; width: 100%; height: auto; }
+
+  .cell {
+    cursor: default;
+    transition: opacity .15s ease, filter .15s ease;
+  }
+  .cell.dim { opacity: 0.35; }
+  .cell-label {
+    fill: #fff;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    pointer-events: none;
+    paint-order: stroke;
+    stroke: rgba(0,0,0,0.18);
+    stroke-width: 0.5px;
+  }
+  .cell-value {
+    fill: rgba(255,255,255,0.78);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10px;
+    pointer-events: none;
+  }
+  .group-label {
+    fill: var(--ink);
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    pointer-events: none;
+  }
+
+  /* legend */
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
+  }
+  .legend .item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--ink-2);
+    cursor: pointer;
+    user-select: none;
+  }
+  .legend .item:hover { color: var(--ink); }
+  .legend .item .sw {
+    width: 10px; height: 10px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend .item.muted { opacity: 0.4; }
+
+  /* tooltip */
+  .tt {
+    position: fixed;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.4;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+    opacity: 0;
+    transition: opacity .12s ease;
+    z-index: 50;
+    max-width: 240px;
+  }
+  .tt.show { opacity: 1; }
+  .tt .name { font-weight: 600; margin-bottom: 4px; }
+  .tt .val { font-family: Arial, Helvetica, sans-serif; color: oklch(0.85 0.01 80); }
+  .tt .sub { font-size: 11px; color: oklch(0.72 0.01 80); margin-top: 2px; }
+
+  /* loading */
+  .skeleton {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 4px;
+    height: 480px;
+  }
+  .skeleton > div {
+    background: linear-gradient(90deg, var(--surface), var(--line), var(--surface));
+    background-size: 200% 100%;
+    animation: shimmer 1.6s infinite;
+  }
+  .skeleton > div:nth-child(1) { grid-row: 1 / span 2; }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* original-style fixed footer */
+  footer {
+    background-color: #fff;
+    padding: 1rem;
+    text-align: center;
+    font-size: 14px;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    border-top: 1px solid var(--line);
+    z-index: 30;
+  }
+  .social-icons a {
+    display: inline-block;
+    margin-right: 10px;
+    color: #888;
+    text-decoration: none;
+  }
+  .social-icons a:hover { color: #333; }
+
+  /* footnote */
+  .footnote {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 24px;
+    margin-top: 24px;
+    border-top: 1px solid var(--line);
+    font-size: 12px;
+    color: var(--ink-3);
+  }
+  .footnote a { color: var(--ink-2); text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+  .footnote a:hover { color: var(--accent); }
+  .footnote .src { max-width: 70%; }
+
+  @media (max-width: 720px) {
+    .page { padding: 32px 20px 56px; }
+    h1 { font-size: 36px; }
+    .dek { font-size: 16px; }
+    .stats { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
 <body>
-  <p>
-    The basic facts:
-  <ul>
-    <li>Annual global emissions - <a href="https://data.worldbank.org/indicator/EN.ATM.GHGT.KT.CE?skipRedirection=true">~50 billion metric tons</a> (1 billion metric ton = 1 GtCO2e)</li>
-    <li>Global GDP - <a href="https://data.worldbank.org/indicator/NY.GDP.MKTP.CD"> ~$100 trillion</a></li>
-    <li>Projected annual cost of climate change - <a
-        href="https://www.axios.com/2024/04/18/climate-change-damages-38-trillion ">$38 trillion</a></li>
-  </ul>
-  </p>
-  <button id="toggle-data" style="width: 200px;">Switch to sector view</button>
-  <input type="text" id="country-filter" list="countries" placeholder="Filter by country">
-  <datalist id="countries"></datalist>
-  <button id="clear-filter">Clear Filter</button>
-  <div style="padding: 1%;">
-    Emissions data from 2023. <a href="https://ourworldindata.org/emissions-by-sector">Courtesy of Climate Watch (2026) – with major processing by Our World in Data</a>
-  </div>
-  <div id="loaddiv">
-    Loading...
-    <div class="loader"></div>
-  </div>
-  <div id="viz" style="padding: 5%;"></div>
-  <script src="script.js"></script>
-</body>
+  <main class="page">
+    <!-- <div class="eyebrow">Climate · 2023 data</div> -->
+    <h1>Where the world's greenhouse gas emissions come from.</h1>
+    <p class="dek">This visualization is based on the work of Our World in Data. For a more detailed breakdown, visit <a href="https://ourworldindata.org/emissions-by-sector">the original article here</a>.</p>
+    <p class="dek">Getting exact numbers is incredibly difficult due to the complexity of tracking emissions and estimating their impact. For example, the team at <a href="https://climatetrace.org/inventory?from=2023&to=2023">Climate Trace</a> estimated 2023 emissions at <em>60 billion tons</em>, or <em>20% higher</em> than what is displayed here.</p>
+    <p class="dek">However, the data that is available is still valuable for understanding the relative distribution of emissions.</p>
+    <p class="dek">As for what we do about it - Climate Trace maintains an incredible <a href="https://climatetrace.org/reduce/countries/all/Global">roadmap visualization</a> that rank orders solutions by impact and effort.</p>
+
+    <section class="stats">
+      <div class="stat">
+        <div class="num">50<span class="unit">Gt CO₂e / yr</span></div>
+        <div class="lbl"><a href="https://data.worldbank.org/indicator/EN.ATM.GHGT.KT.CE?skipRedirection=true">Global emissions in 2023</a></div>
+      </div>
+      <div class="stat">
+        <div class="num">$100<span class="unit">trillion / yr</span></div>
+        <div class="lbl"><a href="https://data.worldbank.org/indicator/NY.GDP.MKTP.CD">Approximate Global GDP</a></div>
+      </div>
+      <div class="stat">
+        <div class="num">27%<span class="unit">cumulative GDP</span></div>
+        <div class="lbl"><a href="https://web-assets.bcg.com/a1/fc/811b182f481fbe039d51776ec172/landing-the-economic-case-for-climate-action-with-decision-makers-wo-spine-mar-2025.pdf">Projected cost of climate change</a></div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <!-- <span class="ctrl-label">View</span> -->
+      <div class="seg" role="tablist" aria-label="View mode">
+        <button class="active" data-view="country">By country</button>
+        <button data-view="sector">By sector</button>
+      </div>
+      <div class="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input id="search" list="countries" placeholder="Filter by country…" autocomplete="off" />
+        <datalist id="countries"></datalist>
+      </div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <section class="chart-frame">
+      <div class="chart-meta">
+        <div>
+          <div class="chart-title" id="chart-title">Emissions by country, then sector</div>
+          <div class="chart-sub" id="chart-sub">Hover any rectangle for detail. Click a legend swatch to isolate.</div>
+        </div>
+        <div class="chart-total" id="chart-total"></div>
+      </div>
+      <div id="viz">
+        <div class="skeleton"><div></div><div></div><div></div><div></div><div></div></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <div class="footnote">
+      <div class="src">Source: <a href="https://ourworldindata.org/emissions-by-sector">Climate Watch (2026), processed by Our World in Data</a>. Emissions data from 2023.</div>
+    </div>
+  </main>
+
   <footer>
     <div class="social-icons">
-      <a href="https://www.linkedin.com/in/liufranklin" target="_blank"
-        ><i class="fab fa-linkedin fa-2x"></i
-      ></a>
-      <a href="https://github.com/liufran1" target="_blank"
-        ><i class="fab fa-github fa-2x"></i
-      ></a>
+      <a href="https://www.linkedin.com/in/liufranklin" target="_blank"><i class="fab fa-linkedin fa-2x"></i></a>
+      <a href="https://github.com/liufran1" target="_blank"><i class="fab fa-github fa-2x"></i></a>
     </div>
   </footer>
+
+  <div class="tt" id="tt"></div>
+
+<script>
+const SECTOR_FIELDS = [
+  'Electricity and heat',
+  'Transport',
+  'Manufacturing and construction',
+  'Industry',
+  'Agriculture',
+  'Aviation and shipping',
+  'Land-use change and forestry',
+  'Waste',
+  'Buildings',
+  'Fugitive emissions',
+  'Other fuel combustion'
+];
+
+const SECTOR_COLOR = {
+  'Electricity and heat':           getCss('--c-elec'),
+  'Transport':                      getCss('--c-trans'),
+  'Manufacturing and construction': getCss('--c-mfg'),
+  'Industry':                       getCss('--c-ind'),
+  'Agriculture':                    getCss('--c-agri'),
+  'Aviation and shipping':          getCss('--c-avia'),
+  'Land-use change and forestry':   getCss('--c-land'),
+  'Waste':                          getCss('--c-waste'),
+  'Buildings':                      getCss('--c-bldg'),
+  'Fugitive emissions':             getCss('--c-fugi'),
+  'Other fuel combustion':          getCss('--c-other'),
+};
+
+function getCss(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+const fmtMt = d3.format(",.0f");        // millions of tCO2e
+const fmtPct = d3.format(".1%");
+
+const state = {
+  view: 'country',     // 'country' | 'sector'
+  filter: '',          // country name
+  isolatedSector: null,// sector hover/isolate
+  rows: [],
+  fullTotal: 0,
+};
+
+// --- data prep ---
+function latestRows(rows, filter='') {
+  const maxYear = {};
+  for (const r of rows) {
+    if (!r.Code || r.Code.includes('OWID_')) continue;
+    maxYear[r.Entity] = Math.max(r.Year, maxYear[r.Entity] || 0);
+  }
+  let out = rows.filter(r => r.Code && !r.Code.includes('OWID_') && r.Year === maxYear[r.Entity]);
+  out.sort((a,b) => totalOf(b) - totalOf(a));
+  if (filter) out = out.filter(r => r.Entity === filter);
+  return out;
+}
+function totalOf(row) {
+  return SECTOR_FIELDS.reduce((s,f) => s + (row[f] || 0), 0);
+}
+
+function buildHierarchy(rows, view) {
+  const root = { name: 'root', children: [] };
+  if (view === 'country') {
+    for (const r of rows) {
+      const node = { name: r.Entity, children: [] };
+      for (const f of SECTOR_FIELDS) {
+        if (r[f] > 0) node.children.push({ name: f, country: r.Entity, sector: f, value: r[f] });
+      }
+      if (node.children.length) root.children.push(node);
+    }
+  } else {
+    for (const f of SECTOR_FIELDS) {
+      const node = { name: f, sector: f, children: [] };
+      for (const r of rows) {
+        if (r[f] > 0) node.children.push({ name: r.Entity, country: r.Entity, sector: f, value: r[f] });
+      }
+      if (node.children.length) root.children.push(node);
+    }
+  }
+  return root;
+}
+
+// --- render ---
+const viz = d3.select('#viz');
+const tt = d3.select('#tt');
+
+function renderTreemap() {
+  const filteredRows = state.filter ? state.rows.filter(r => r.Entity === state.filter) : state.rows;
+  const total = d3.sum(filteredRows, totalOf);
+  const root = buildHierarchy(filteredRows, state.view);
+
+  const width = viz.node().clientWidth;
+  // scale height by share of global
+  const baseH = 560;
+  const scale = state.filter ? Math.max(0.35, Math.sqrt(total / state.fullTotal)) : 1;
+  const height = state.filter ? Math.max(280, baseH * scale) : baseH;
+
+  d3.select('#chart-total').html(
+    `<b>${fmtMt(total/1e6)}</b> Mt CO₂e ` +
+    (state.filter ? `· ${fmtPct(total/state.fullTotal)} of global` : `· ${fmtPct(total/state.fullTotal)} of global`)
+  );
+
+  const hier = d3.hierarchy(root)
+    .sum(d => d.value || 0)
+    .sort((a,b) => b.value - a.value);
+
+  // Pre-pass to know each group's untouched footprint so we can pad large
+  // groups generously and small ones not at all.
+  const probe = d3.treemap().size([width, height]).paddingInner(1).round(true);
+  probe(hier.copy());
+  // d3.treemap accepts functions for padding — give big groups breathing room
+  // (label + outer gap), tiny groups none.
+  const padTop = d => {
+    const w = d.x1 - d.x0, h = d.y1 - d.y0;
+    return (w >= 80 && h >= 60) ? 22 : 1;
+  };
+  const padOuter = d => {
+    const w = d.x1 - d.x0, h = d.y1 - d.y0;
+    return (w >= 80 && h >= 60) ? 10 : 1;
+  };
+  d3.treemap()
+    .size([width, height])
+    .paddingInner(1)
+    .paddingOuter(padOuter)
+    .paddingTop(padTop)
+    .round(true)(hier);
+
+  const leaves = hier.leaves();
+  const groups = hier.children || [];
+
+  viz.select('.skeleton').remove();
+  let svg = viz.select('svg');
+  if (svg.empty()) svg = viz.append('svg');
+  svg.attr('viewBox', `0 0 ${width} ${height}`)
+     .attr('width', width).attr('height', height);
+
+  // group labels — only when the group has room
+  const labelGroups = groups.filter(d => (d.x1 - d.x0) >= 80 && (d.y1 - d.y0) >= 60);
+  const gSel = svg.selectAll('text.group-label').data(labelGroups, d => d.data.name);
+  gSel.exit().remove();
+  gSel.enter().append('text')
+    .attr('class','group-label')
+    .merge(gSel)
+    .attr('x', d => d.x0 + 2)
+    .attr('y', d => d.y0 + 14)
+    .text(d => {
+      const w = d.x1 - d.x0;
+      const full = `${d.data.name} · ${fmtMt(d.value/1e6)} Mt`;
+      // ~6.5 px/char for 13px Arial — trim if overflowing
+      const maxChars = Math.floor((w - 6) / 6.5);
+      if (full.length <= maxChars) return full;
+      if (d.data.name.length <= maxChars) return d.data.name;
+      return d.data.name.slice(0, Math.max(0, maxChars - 1)) + '…';
+    });
+
+  // cells
+  const cells = svg.selectAll('g.cell').data(leaves, d => `${d.data.country}|${d.data.sector}`);
+  cells.exit().remove();
+  const cellsEnter = cells.enter().append('g').attr('class','cell');
+  cellsEnter.append('rect');
+  cellsEnter.append('text').attr('class','cell-label');
+  cellsEnter.append('text').attr('class','cell-value');
+
+  const cellsAll = cellsEnter.merge(cells);
+
+  cellsAll
+    .on('mouseenter', (e,d) => {
+      tt.classed('show', true).html(
+        `<div class="name">${d.data.country}</div>` +
+        `<div class="sub">${d.data.sector}</div>` +
+        `<div class="val">${fmtMt(d.value/1e6)} Mt CO₂e · ${fmtPct(d.value/state.fullTotal)} of global</div>`
+      );
+    })
+    .on('mousemove', (e) => {
+      const x = Math.min(e.clientX + 14, window.innerWidth - 260);
+      const y = Math.min(e.clientY + 14, window.innerHeight - 100);
+      tt.style('left', x+'px').style('top', y+'px');
+    })
+    .on('mouseleave', () => tt.classed('show', false))
+    .classed('dim', d => state.isolatedSector && d.data.sector !== state.isolatedSector);
+
+  cellsAll.select('rect')
+    .transition().duration(400)
+    .attr('x', d => d.x0)
+    .attr('y', d => d.y0)
+    .attr('width',  d => Math.max(0, d.x1 - d.x0))
+    .attr('height', d => Math.max(0, d.y1 - d.y0))
+    .attr('fill', d => SECTOR_COLOR[d.data.sector] || 'var(--c-other)');
+
+  cellsAll.select('text.cell-label')
+    .attr('x', d => d.x0 + 8)
+    .attr('y', d => d.y0 + 16)
+    .text(d => {
+      const w = d.x1 - d.x0, h = d.y1 - d.y0;
+      if (w < 60 || h < 28) return '';
+      return state.view === 'country' ? d.data.country : d.data.country;
+    });
+
+  cellsAll.select('text.cell-value')
+    .attr('x', d => d.x0 + 8)
+    .attr('y', d => d.y0 + 30)
+    .text(d => {
+      const w = d.x1 - d.x0, h = d.y1 - d.y0;
+      if (w < 80 || h < 44) return '';
+      return state.view === 'country'
+        ? d.data.sector.replace('Manufacturing and construction','Mfg & const.')
+                       .replace('Land-use change and forestry','Land use')
+                       .replace('Aviation and shipping','Aviation')
+                       .replace('Electricity and heat','Electricity')
+                       .replace('Other fuel combustion','Other fuel')
+        : d.data.country;
+    });
+
+  // chart title/subtitle
+  if (state.filter) {
+    d3.select('#chart-title').text(`${state.filter} — emissions by sector`);
+    d3.select('#chart-sub').text('Box size scales relative to global emissions.');
+  } else if (state.view === 'country') {
+    d3.select('#chart-title').text('Emissions by country, then sector');
+    d3.select('#chart-sub').text('Largest emitters first. Color encodes sector.');
+  } else {
+    d3.select('#chart-title').text('Emissions by sector, then country');
+    d3.select('#chart-sub').text('Each group is a sector; cells inside are the countries contributing to it.');
+  }
+}
+
+function renderLegend() {
+  const present = new Set();
+  const filteredRows = state.filter ? state.rows.filter(r => r.Entity === state.filter) : state.rows;
+  for (const r of filteredRows) for (const f of SECTOR_FIELDS) if (r[f] > 0) present.add(f);
+
+  const data = SECTOR_FIELDS.filter(f => present.has(f));
+  const sel = d3.select('#legend').selectAll('.item').data(data, d => d);
+  sel.exit().remove();
+  const enter = sel.enter().append('div').attr('class','item');
+  enter.append('span').attr('class','sw');
+  enter.append('span').attr('class','lbl');
+  const all = enter.merge(sel);
+  all.select('.sw').style('background', d => SECTOR_COLOR[d]);
+  all.select('.lbl').text(d => d);
+  all.classed('muted', d => state.isolatedSector && state.isolatedSector !== d)
+     .on('mouseenter', (e,d) => { state.isolatedSector = d; renderTreemap(); renderLegend(); })
+     .on('mouseleave', () => { state.isolatedSector = null; renderTreemap(); renderLegend(); });
+}
+
+function renderChips() {
+  const sel = d3.select('#chips').selectAll('.chip').data(state.filter ? [state.filter] : []);
+  sel.exit().remove();
+  const enter = sel.enter().append('div').attr('class','chip');
+  enter.append('span').text(d => d);
+  enter.append('button').attr('aria-label','Clear filter').html(svgX());
+  enter.select('button').on('click', () => {
+    state.filter = '';
+    document.getElementById('search').value = '';
+    renderAll();
+  });
+}
+function svgX() { return '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>'; }
+
+function renderAll() {
+  renderChips();
+  renderLegend();
+  renderTreemap();
+}
+
+// --- wire up ---
+d3.selectAll('.seg button').on('click', function() {
+  d3.selectAll('.seg button').classed('active', false);
+  d3.select(this).classed('active', true);
+  state.view = this.dataset.view;
+  renderTreemap();
+});
+
+d3.select('#search').on('input', function() {
+  const v = this.value.trim();
+  // only commit when matches a known country
+  const opts = Array.from(document.querySelectorAll('#countries option')).map(o => o.value);
+  if (!v) { state.filter = ''; renderAll(); return; }
+  if (opts.includes(v)) { state.filter = v; renderAll(); }
+});
+
+window.addEventListener('resize', () => renderTreemap());
+
+// --- load data ---
+d3.csv('../data/ghg-emissions-by-sector.csv', d3.autoType).then(raw => {
+  state.rows = latestRows(raw);
+  state.fullTotal = d3.sum(state.rows, totalOf);
+
+  // datalist
+  const dl = d3.select('#countries');
+  state.rows.map(r => r.Entity).sort().forEach(c => dl.append('option').attr('value', c));
+
+  renderAll();
+});
+</script>
+</body>
 </html>
